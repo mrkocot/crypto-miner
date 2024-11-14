@@ -29,3 +29,7 @@ class Game:
 
     def new_tx(self) -> Transaction:
         return generator.generate_tx(self.sources)
+
+    def source_lookup(self, tx_id: str) -> list[TxOutput]:
+        res = filter(lambda src: src.tx_id == tx_id, self.sources)
+        return list(res)
