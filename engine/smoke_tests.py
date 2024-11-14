@@ -25,7 +25,7 @@ def test_base58():
 def test_transaction_generation():
     sources = []
     t = generate_tx(sources)
-    print(t)
+    print(t.printable())
 
 
 # test_script_generation()
