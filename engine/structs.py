@@ -59,3 +59,27 @@ class OpX(OpCode):
         else:
             super().__init__(80 + number, f'OP_{number}', lambda: number)
 
+
+class TxIO:  # transaction input or output
+    def __init__(self, tx_id: str, index: int, script: list):
+        self.tx_id = tx_id
+        self.index = index
+        self.script = script  # "chest lock" in case of outputs, "chest key" in case of inputs
+
+class TxInput(TxIO):
+    pass
+
+class TxOutput(TxIO):
+    def __init__(self, tx_id: str, index: int, script: list, amount: int):
+        self.amount = amount
+        super().__init__(tx_id, index, script)
+
+
+class Transaction:
+    def __init__(self, tx_id: str, input_: TxInput, outputs: list[TxOutput], total: int, fee: int, error: str):
+        self.tx_id = tx_id
+        self.input = input_
+        self.outputs = outputs
+        self.total = total
+        self.fee = fee
+        self.error = error

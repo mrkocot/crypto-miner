@@ -1,4 +1,4 @@
-from engine.generator import generate_arithmetic_script
+from engine.generator import generate_arithmetic_script, generate_tx
 from engine import base58
 
 def test_script_generation():
@@ -22,6 +22,12 @@ def test_base58():
     decoded = base58.decode_int(encoded)
     print(f'{the_int} -> {encoded} -> {decoded}')
 
+def test_transaction_generation():
+    sources = []
+    t = generate_tx(sources)
+    print(t)
+
 
 # test_script_generation()
 # test_base58()
+# test_transaction_generation()

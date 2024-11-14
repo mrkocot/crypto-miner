@@ -1,6 +1,8 @@
+import math
 import random
-from engine import op
-from engine.structs import OpX, OpCode, OpPushBytes
+import secrets
+from engine import op, base58
+from engine.structs import OpX, OpCode, OpPushBytes, TxInput, TxOutput, Transaction
 
 def weighed_choice(options: dict):
     total = sum(options.values())
@@ -12,6 +14,8 @@ def weighed_choice(options: dict):
             return o
         upto += w
     assert False, "weighed_choice failed to pick an option"
+
+############################# SCRIPT ###################################
 
 def _random_offset(base_value: int, down: int, up: int, avoid_base: bool = True) -> int:
     lowest = max(base_value + down, -1)
@@ -78,7 +82,7 @@ def get_last_item(result: int, finisher: OpCode, correct: bool) -> int:
     else:
         raise ValueError(f'Unknown finisher: {finisher}')
 
-def generate_arithmetic_script(correct: bool)-> list:  # if correct is False, the script should fail the verification
+def generate_arithmetic_script(correct: bool) -> list[OpCode]:  # if correct is False, the script should fail the verification
     instructions = []
     stack = []
     strategy = {'reduce': 0, 'keep': 7, 'expand': 14}
@@ -122,3 +126,61 @@ def generate_arithmetic_script(correct: bool)-> list:  # if correct is False, th
 
     instructions.append(finisher)
     return instructions
+
+############################# TX ###################################
+
+_errors = {
+    'none': 4,
+    'script_failed': 2,
+    'negative_fee': 1,
+    'invalid_input': 1,
+    'io_amount_mismatch': 1,
+}
+
+def _random_sha1() -> str:
+    return secrets.token_hex(32)
+
+def _random_tx_id() -> str:
+    return base58.encode(_random_sha1())
+
+def _generate_valid_io_pair(script_ok: bool) -> tuple[TxOutput, TxInput]:  # (external output, our input)
+    script = generate_arithmetic_script(script_ok)
+    amount = random.randint(10, 2_500) * (10 ** random.randint(1, 5))
+    tx_id = _random_tx_id()
+    index = random.randint(0, 4)
+    a = TxOutput(tx_id, index, script[2:], amount)
+    b = TxInput(tx_id, index, script[:2])
+    return a, b
+
+def _divide(total: int) -> list[int]:
+    divisions = random.randint(1, 4)
+    ends = [total]
+    for _ in range(divisions - 1):
+        new_end = random.randint(0, total)
+        ends.append(new_end)
+    ends.sort()
+    for i in range(divisions - 1, 0, -1):
+        ends[i] -= ends[i - 1]
+    return ends
+
+def _generate_output(index: int, amount: int) -> TxOutput:
+    tx_id = _random_tx_id()
+    script = [op.verify]
+    return TxOutput(tx_id, index, script, amount)
+
+def generate_tx(source_list: list[TxOutput]) -> Transaction:
+    error = weighed_choice(_errors)
+    script_ok = error != 'script_failed'
+    src, inp = _generate_valid_io_pair(script_ok=script_ok)
+    if error != 'invalid_input':
+        source_list.append(src)
+    amount = src.amount
+    if error == 'negative_fee':
+        fee_factor = .01 * random.randint(-20, -5)
+    else:
+        fee_factor = .01 * random.randint(10, 50)
+    fee = math.ceil(fee_factor * amount)
+    netto = amount - fee
+    output_amounts = _divide(netto)
+    outputs = [_generate_output(i, a) for i, a in enumerate(output_amounts)]
+    return Transaction(_random_tx_id(), inp, outputs, amount, fee, error)
