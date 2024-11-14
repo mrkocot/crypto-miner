@@ -134,7 +134,7 @@ _errors = {
     'script_failed': 2,
     'negative_fee': 1,
     'invalid_input': 1,
-    'io_amount_mismatch': 1,
+    'already_spent': 1,
 }
 
 def _random_sha1() -> str:
@@ -173,6 +173,8 @@ def generate_tx(source_list: list[TxOutput]) -> Transaction:
     script_ok = error != 'script_failed'
     src, inp = _generate_valid_io_pair(script_ok=script_ok)
     if error != 'invalid_input':
+        if error == 'already_spent':
+            src.spent = True
         source_list.append(src)
     amount = src.amount
     if error == 'negative_fee':

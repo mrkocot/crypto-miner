@@ -1,4 +1,5 @@
 import inspect
+import hashlib
 
 class OpCode:
     def __init__(self, number: int, name: str, body):
@@ -70,9 +71,15 @@ class TxInput(TxIO):
     pass
 
 class TxOutput(TxIO):
+    spent = False
+
     def __init__(self, tx_id: str, index: int, script: list, amount: int):
         self.amount = amount
         super().__init__(tx_id, index, script)
+
+    def printable(self) -> str:
+        script_str = ' '.join((str(opc) for opc in self.script))
+        return f'{self.tx_id} #{self.index} -> {self.amount} SAT | ScriptPubKey = {script_str}'
 
 
 class Transaction:
@@ -83,3 +90,28 @@ class Transaction:
         self.total = total
         self.fee = fee
         self.error = error
+
+    def printable(self) -> str:
+        input_script = ' '.join((str(opc) for opc in self.input.script))
+        ret = f'Transaction {self.tx_id}:\n'
+        ret += f'  Input:\n'
+        ret += f'    {self.input.tx_id} #{self.input.index} -> ScriptSig = {input_script}\n'
+        ret += f'  Outputs:\n'
+        for output in self.outputs:
+            ret += f'    #{output.index} -> {output.amount} SAT\n'
+        return ret
+
+
+class Block:
+    transactions: list[Transaction] = []
+
+    def hash(self, nonce: int) -> str:
+        tx_ids = (tx.tx_id for tx in self.transactions)
+        cat = ''.join(sorted(tx_ids)) + str(nonce)
+        sha1 = hashlib.sha1()
+        sha1.update(cat.encode('ascii'))
+        return sha1.hexdigest()
+
+    def income(self) -> int:
+        corrects = (tx.fee for tx in self.transactions if tx.error == 'none')
+        return 312_500_000 + sum(corrects)
