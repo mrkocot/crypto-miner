@@ -15,6 +15,9 @@ def weighed_choice(options: dict):
         upto += w
     assert False, "weighed_choice failed to pick an option"
 
+def yes_or_no(percent_chance: int) -> bool:
+    return random.randint(1, 100) <= percent_chance
+
 ############################# SCRIPT ###################################
 
 def _random_offset(base_value: int, down: int, up: int, avoid_base: bool = True) -> int:
@@ -152,6 +155,14 @@ def _generate_valid_io_pair(script_ok: bool) -> tuple[TxOutput, TxInput]:  # (ex
     b = TxInput(tx_id, index, script[:2])
     return a, b
 
+def _generate_fake_sources(tx_id: str, index_until: int) -> list[TxOutput]:  # no-op for index_until<=0
+    ret: list[TxOutput] = []
+    for i in range(index_until):
+        script = generate_arithmetic_script(correct=False)[2:]
+        amount = random.randint(10, 2_500) * (10 ** random.randint(1, 5))
+        ret.append(TxOutput(tx_id, i, script, amount))
+    return ret
+
 def _divide(total: int) -> list[int]:
     divisions = random.randint(1, 4)
     ends = [total]
@@ -172,6 +183,8 @@ def generate_tx(source_list: list[TxOutput]) -> Transaction:
     error = weighed_choice(_errors)
     script_ok = error != 'script_failed'
     src, inp = _generate_valid_io_pair(script_ok=script_ok)
+    if error != 'invalid_input' or yes_or_no(50):  # always if not invalid input, 50% chance otherwise
+        source_list.extend(_generate_fake_sources(src.tx_id, src.index))  # add fake lower-index sources
     if error != 'invalid_input':
         if error == 'already_spent':
             src.spent = True
