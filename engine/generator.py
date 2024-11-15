@@ -13,7 +13,6 @@ def weighed_choice(options: dict):
         upto += w
         if upto >= r:
             return o
-        upto += w
     assert False, "weighed_choice failed to pick an option"
 
 def yes_or_no(percent_chance: int) -> bool:

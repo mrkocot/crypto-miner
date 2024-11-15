@@ -1,4 +1,4 @@
-from engine.generator import generate_arithmetic_script, generate_tx
+from engine.generator import generate_arithmetic_script, generate_tx, weighed_choice
 from engine import base58
 
 def test_script_generation():
@@ -26,8 +26,18 @@ def test_transaction_generation():
     sources = []
     t = generate_tx(sources)
     print(t.printable())
+    print(sources[0].printable())
+
+def test_weighed_choice():
+    occurs = {'a': 0, 'b': 0, 'c': 0, 'd': 0, 'e': 0}
+    chances = {'a': 1, 'b': 7, 'c': 2, 'd': 0, 'e': 4}
+    for _ in range(14000):
+        choice = weighed_choice(chances)
+        occurs[choice] += 1
+    print(occurs)
 
 
 # test_script_generation()
 # test_base58()
 # test_transaction_generation()
+# test_weighed_choice()

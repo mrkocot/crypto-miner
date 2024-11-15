@@ -76,7 +76,6 @@ def reward():
         print(f'You have requested a reward of {btc} BTC (3.125 for mining + sum of transaction fees)')
 
 def nonce_find():
-    block_hash = ''
     nonce = 0
     if reward_requested is None:
         print(f'You have not requested a reward yet. Do it with "reward"')
