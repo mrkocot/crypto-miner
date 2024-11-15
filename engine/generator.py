@@ -3,6 +3,7 @@ import random
 import secrets
 from engine import op, base58
 from engine.structs import OpX, OpCode, OpPushBytes, TxInput, TxOutput, Transaction
+from engine.settings import *
 
 def weighed_choice(options: dict):
     total = sum(options.values())
@@ -75,20 +76,20 @@ def get_last_item(result: int, finisher: OpCode, correct: bool) -> int:
     elif (finisher.name == 'OP_NUMNOTEQUAL' and correct) or (finisher.name == 'OP_NUMEQUAL' and not correct):
         return _random_offset(base_value=result, down=-10, up=10)
     elif (finisher.name == 'OP_GREATERTHAN' and correct) or (finisher.name == 'OP_LESSTHANOREQUAL' and not correct):
-        return _random_offset(base_value=result, down=1, up=10)
-    elif (finisher.name == 'OP_LESSTHANOREQUAL' and correct) or (finisher.name == 'OP_GREATERTHAN' and not correct):
-        return _random_offset(base_value=result, down=-10, up=0, avoid_base=False)
-    elif (finisher.name == 'OP_LESSTHAN' and correct) or (finisher.name == 'OP_GREATERTHANOREQUAL' and not correct):
         return _random_offset(base_value=result, down=-10, up=-1)
-    elif (finisher.name == 'OP_GREATERTHANOREQUAL' and correct) or (finisher.name == 'OP_LESSTHAN' and not correct):
+    elif (finisher.name == 'OP_LESSTHANOREQUAL' and correct) or (finisher.name == 'OP_GREATERTHAN' and not correct):
         return _random_offset(base_value=result, down=0, up=10, avoid_base=False)
+    elif (finisher.name == 'OP_LESSTHAN' and correct) or (finisher.name == 'OP_GREATERTHANOREQUAL' and not correct):
+        return _random_offset(base_value=result, down=1, up=10)
+    elif (finisher.name == 'OP_GREATERTHANOREQUAL' and correct) or (finisher.name == 'OP_LESSTHAN' and not correct):
+        return _random_offset(base_value=result, down=-10, up=0, avoid_base=False)
     else:
         raise ValueError(f'Unknown finisher: {finisher}')
 
 def generate_arithmetic_script(correct: bool) -> list[OpCode]:  # if correct is False, the script should fail the verification
     instructions = []
     stack = []
-    strategy = {'reduce': 0, 'keep': 7, 'expand': 14}
+    strategy = {'reduce': 0, 'keep': SCRIPT_LENGTH, 'expand': 2 * SCRIPT_LENGTH}
     for _ in range(2):  # two starting items
         starting_item = random.randint(-1, 16)
         instructions.append(OpX(starting_item))
@@ -111,12 +112,17 @@ def generate_arithmetic_script(correct: bool) -> list[OpCode]:  # if correct is 
             if strategy['expand'] > 1:  # the longer we go, the lower the chance of expansion
                 strategy['expand'] -= 1
                 strategy['reduce'] += 1
-        except (ValueError, IndexError) as e:
-            print(f'W | Operation {operation} not added: {e}')
+        except (ValueError, IndexError):
+            # print(f'W | Operation {operation} not added: {e}')
+            pass
     result = stack[0]
 
-    if 0 <= result <= 126:  # leaving -1 and 127 as margins for comparisons
-        finisher = weighed_choice(_finishers)
+    finisher = weighed_choice(_finishers)
+    precise_finisher = finisher.name in ('OP_NUMEQUAL', 'OP_NUMNOTEQUAL')
+    if result < -1 or (result == -1 and not precise_finisher):  # we don't like negative numbers - negate those
+        instructions.append(op.negate)
+        result = -result
+    if 0 <= result <= 126 or (precise_finisher and result in (-1, 127)):  # leaving -1 and 127 as margins for < or >
         last_item = get_last_item(result, finisher, correct)
         if -1 <= last_item <= 16:
             instructions.append(OpX(last_item))
@@ -133,8 +139,8 @@ def generate_arithmetic_script(correct: bool) -> list[OpCode]:  # if correct is 
 ############################# TX ###################################
 
 _errors = {
-    'none': 4,
-    'script_failed': 2,
+    'none': 6,
+    'script_failed': 1,
     'negative_fee': 1,
     'invalid_input': 1,
     'already_spent': 1,
@@ -155,12 +161,18 @@ def _generate_valid_io_pair(script_ok: bool) -> tuple[TxOutput, TxInput]:  # (ex
     b = TxInput(tx_id, index, script[:2])
     return a, b
 
-def _generate_fake_sources(tx_id: str, index_until: int) -> list[TxOutput]:  # no-op for index_until<=0
+def _generate_fake_sources(tx_id: str, real_index: int) -> list[TxOutput]:  # no-op for real_index<=0
     ret: list[TxOutput] = []
-    for i in range(index_until):
+    indices_after = random.randint(0, 2)
+    fake_indices = range(0, real_index + indices_after)
+    for i in fake_indices:
+        if i == real_index:
+            continue
         script = generate_arithmetic_script(correct=False)[2:]
         amount = random.randint(10, 2_500) * (10 ** random.randint(1, 5))
-        ret.append(TxOutput(tx_id, i, script, amount))
+        out = TxOutput(tx_id, i, script, amount)
+        out.spent = yes_or_no(30)
+        ret.append(out)
     return ret
 
 def _divide(total: int) -> list[int]:
