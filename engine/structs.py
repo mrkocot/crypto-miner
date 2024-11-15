@@ -38,14 +38,16 @@ class OpPushBytes(OpCode):
         if byte_number > 75:
             raise ValueError('Trying to push more than 75 bytes')
         self.hex_bytes = hex_bytes
+        self.dec = dec
         lambda_result = dec if byte_number <= 4 else hex_bytes
         super().__init__(byte_number, f'OP_PUSHBYTES{byte_number}', lambda : lambda_result)
 
     def to_hex(self):
-        super().to_hex() + self.hex_bytes
+        return super().to_hex() + self.hex_bytes
 
     def __str__(self) -> str:
-        return self.name + ':' + self.hex_bytes
+        thing_to_show = self.dec if len(self.hex_bytes) <= 8 else self.hex_bytes
+        return self.name + ':' + str(thing_to_show)
 
 class OpX(OpCode):
     def __init__(self, number: int):
@@ -62,7 +64,7 @@ class OpX(OpCode):
 
 
 class TxIO:  # transaction input or output
-    def __init__(self, tx_id: str, index: int, script: list):
+    def __init__(self, tx_id: str, index: int, script: list[OpCode]):
         self.tx_id = tx_id
         self.index = index
         self.script = script  # "chest lock" in case of outputs, "chest key" in case of inputs
@@ -79,7 +81,11 @@ class TxOutput(TxIO):
 
     def printable(self) -> str:
         script_str = ' '.join((str(opc) for opc in self.script))
-        return f'{self.tx_id} #{self.index} -> {self.amount} SAT | ScriptPubKey = {script_str}'
+        # print(f'D | {script_str}')
+        # print(f'D | {[opc.to_hex() for opc in self.script]}')
+        script_hex = ''.join((opc.to_hex() for opc in self.script))
+        spent_str = 'U' if not self.spent else 'S'
+        return f'{self.tx_id} #{self.index} -> {self.amount} SAT <{spent_str}> | ScriptPubKey = {script_hex} [{script_str}]'
 
 
 class Transaction:
@@ -93,9 +99,10 @@ class Transaction:
 
     def printable(self) -> str:
         input_script = ' '.join((str(opc) for opc in self.input.script))
+        script_hex = ''.join((opc.to_hex() for opc in self.input.script))
         ret = f'Transaction {self.tx_id}:\n'
         ret += f'  Input:\n'
-        ret += f'    {self.input.tx_id} #{self.input.index} -> ScriptSig = {input_script}\n'
+        ret += f'    {self.input.tx_id} #{self.input.index} -> ScriptSig = {script_hex} [{input_script}]\n'
         ret += f'  Outputs:\n'
         for output in self.outputs:
             ret += f'    #{output.index} -> {output.amount} SAT\n'
@@ -112,6 +119,9 @@ class Block:
         sha1.update(cat.encode('ascii'))
         return sha1.hexdigest()
 
-    def income(self) -> int:
-        corrects = (tx.fee for tx in self.transactions if tx.error == 'none')
-        return 312_500_000 + sum(corrects)
+    def reward(self, include_wrong: bool) -> int:
+        if include_wrong:
+            fees = (tx.fee for tx in self.transactions)
+        else:
+            fees = (tx.fee for tx in self.transactions if tx.error == 'none')
+        return 312_500_000 + sum(fees)
