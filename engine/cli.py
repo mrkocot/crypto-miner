@@ -20,16 +20,18 @@ def transaction(args_: list[str]):
         else:
             # print(f'D | Current error: {current_tx.error}')
             print(current_tx.printable())
-    elif args_[0] == 'new':
+    elif args_[0] in ('new', 'get'):
         if current_tx is not None:
             print(f'Transaction {current_tx.tx_id} is still waiting for your decision')
         else:
             current_tx = game.new_tx()
             print(f'New transaction obtained! View it with "transaction"')
-    elif args_[0] == 'count':
-        message = f'You have processed {len(game.block.transactions)} transactions'
+    elif args_[0] in ('count', 'stats'):
+        accepted_ = len(game.block.transactions)
+        rejected_ = len(game.rejected_tx)
+        message = f'You have processed {accepted_ + rejected_} transactions so far ({accepted_} accepted, {rejected_} rejected)'
         if current_tx is not None:
-            message += f' (and one is waiting for your decision)'
+            message += f'. Also, one more is waiting for your decision'
         print(message)
     else:
         print(f'Unknown subcommand "{args_[0]}"')
@@ -129,11 +131,11 @@ while not loop_end:
         accept()
     elif command == 'reject':
         reject()
-    elif command == 'reward':
+    elif command in ('reward', 'prize', 'payout'):
         reward()
     elif command == 'nonce':
         nonce_find()
-    elif command == 'close':
+    elif command in ('close', 'end', 'sign'):
         close(args)
     else:
         print(f'Unknown command "{command}"')
@@ -142,7 +144,7 @@ input('Press ENTER to publish (you can\'t turn back anymore)... ')
 
 elapsed = time.time() - start_time
 elapsed_delta = timedelta(seconds=elapsed)
-tx_num = len(game.block.transactions)
+tx_num = len(game.block.transactions) + len(game.rejected_tx)
 summary = game.result_summary()
 real_reward = game.block.reward(include_wrong=False)
 reward_diff = reward_requested - real_reward
