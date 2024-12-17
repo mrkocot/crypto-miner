@@ -1,10 +1,12 @@
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QLineEdit
-from PyQt6.QtCore import Qt, QPropertyAnimation, QTimer, QThread, pyqtSignal
-from PyQt6.QtGui import QPixmap, QFont
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QLineEdit, QTextEdit
+from PyQt6.QtCore import Qt, QPropertyAnimation, QTimer, QThread, pyqtSignal, QUrl, QPoint, QEasingCurve
+from PyQt6.QtGui import QPixmap, QFont, QTextCursor, QTransform
+from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 import sys
 import os
 import subprocess
 import time
+import random
 
 os.environ["QT_ENABLE_HIGHDPI_SCALING"]   = "0"
 os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "0"
@@ -65,11 +67,134 @@ class GameGUI(QMainWindow):
         self.setWindowTitle("Crypto Miner")
         self.setFixedSize(1280, 1024)
         self.cli_thread = CLIThread()
-        self.cli_thread.output_signal.connect(self.update_console_output)  # Połącz wątek z GUI
-        self.cli_thread.start()  # Rozpoczęcie wątku CLI
+        self.cli_thread.output_signal.connect(self.update_console_output) 
+        self.cli_thread.start() 
+        self.media_player = None
+        self.is_game_screen_active = False
+        self.is_lewa_strona = False
+
+        self.cat_timer = QTimer(self)  
+        self.cat_timer.timeout.connect(self.show_cat)
+        self.cat_timer.start(8000)  
+        self.current_cat = None 
+        self.cat_images = [
+            "engine/assets/cat1.png",
+            "engine/assets/cat2.png",
+            "engine/assets/cat3.png",
+            "engine/assets/cat4.png",
+            "engine/assets/cat5.png",
+            "engine/assets/cat6.png",
+            "engine/assets/cat7.png",
+            "engine/assets/cat8.png",
+            "engine/assets/cat9.png",
+            "engine/assets/cat10.png"]
         # Ekran powitalny
         self.welcome_screen()
 
+    def show_cat(self):
+        """Funkcja do wyświetlania kota na ekranie gry z losowym obrazkiem"""
+        if not self.is_game_screen_active:
+            return  
+
+        if self.current_cat: 
+            return
+
+        # Wybór losowego kota z listy obrazków
+        cat_image = random.choice(self.cat_images)
+
+        
+        self.current_cat = QLabel(self)
+        pixmap = QPixmap(cat_image)
+
+        if pixmap.isNull():
+            print(f"Nie udało się załadować obrazka kota: {cat_image}")
+            return
+
+        self.current_cat.setPixmap(pixmap)
+        self.current_cat.setFixedSize(pixmap.width() // 4, pixmap.height() // 4)  
+        self.current_cat.setScaledContents(True)
+        self.current_cat.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        window_width = 1280
+        window_height = 1024
+
+        x_position = (window_width) * 2
+        y_position = ((window_height) * 2)
+
+        self.current_cat.move(x_position, y_position)
+
+        self.current_cat.show()
+        self.current_cat.raise_()
+
+        # DEBUGLINE print(f"Pozycja kota: {self.current_cat.pos()}")  # Sprawdzamy pozycję kota po ustawieniu
+
+        # Opóźniamy animację, by GUI mogło się zaktualizować
+        QTimer.singleShot(100, self.animate_cat)  # 100ms opóźnienie przed rozpoczęciem animacji
+
+
+
+    def animate_cat(self):
+        """Animacja kota z wykorzystaniem czasu zamiast delta"""
+        if not self.current_cat:
+            print("Brak kota na ekranie. Animacja nie może się rozpocząć.")
+            return
+
+        # Wybór kierunku animacji (z lewej na prawą lub z prawej na lewą)
+        if random.choice([True, False]): 
+            start_position = QPoint(1280, 780)  # Prawa strona
+            end_position = QPoint(-800, 780)   # Lewa strona
+            self.current_cat.move(start_position)
+        else:
+            start_position = QPoint(-200, 780)    # Lewa strona
+            end_position = QPoint(1280, 780)   # Prawa strona
+            self.current_cat.move(start_position)
+            transform = QTransform()
+            transform.scale(-1, 1)  # Odbicie w poziomie (oś X)
+            self.current_cat.setPixmap(self.current_cat.pixmap().transformed(transform))
+            self.is_lewa_strona = True
+
+        #DEBUGLINE print(f"Pozycja początkowa: {start_position}")
+        #DEBUGLINE print(f"Pozycja końcowa: {end_position}")
+
+        animation_duration = 10000  
+        steps = 2000  
+        step_time = animation_duration / steps  
+
+        start_time = 0  # Czas początkowy
+
+        def move_step():
+            nonlocal start_time
+
+            progress = min(start_time / animation_duration, 1.0)
+
+            # Interpolacja liniowa w celu obliczenia pozycji
+            new_x = start_position.x() + progress * (end_position.x() - start_position.x())
+            new_y = start_position.y() + progress * (end_position.y() - start_position.y())
+
+            self.current_cat.move(int(new_x), int(new_y))
+
+            if progress >= 1.0:
+                #DEBUGLINE print("Animacja zakończona!")
+                self.current_cat.move(end_position)  # Ustawiamy kota dokładnie na końcowej pozycji
+                self.timer.stop()  # Zatrzymujemy timer
+                if self.is_lewa_strona:
+                    transform.scale(-1, 1)  # Odbicie w poziomie (oś X)
+                    self.current_cat.setPixmap(self.current_cat.pixmap().transformed(transform))
+                    self.is_lewa_strona = False
+                # Usuwanie kota po zakończeniu animacji
+                self.current_cat.deleteLater()  # Usuń kota z widoku
+                self.current_cat = None  # Resetujemy zmienną kota
+                return
+
+            # Zwiększamy czas trwania animacji
+            start_time += step_time
+
+        # Ustawiamy timer, który będzie wykonywał krok co odpowiedni czas
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(move_step)
+        self.timer.start(int(step_time))  # Konwertujemy step_time na int
+
+        
     def welcome_screen(self):
         """Pokazuje ekran powitalny z obrazkiem i napisem"""
         self.central_widget = QWidget()
@@ -135,9 +260,59 @@ class GameGUI(QMainWindow):
         self.text_label.hide()
 
         # Uruchomienie gry
+        self.play_music()
         self.game_screen()
 
+
+    def play_music(self):
+        """Odtwarzanie dwóch piosenek na zmianę w pętli"""
+        # Ścieżki do plików muzycznych
+        self.music_files = [
+            "engine/assets/music1.flac",  # Pierwsza piosenka
+            "engine/assets/music2.flac"   # Druga piosenka
+        ]
+
+        # Sprawdzenie, czy pliki istnieją
+        for music_file in self.music_files:
+            if not os.path.exists(music_file):
+                print(f"Błąd: Nie znaleziono pliku muzycznego {music_file}")
+                return
+
+        # Tworzenie odtwarzacza i ustawienia
+        self.media_player = QMediaPlayer()
+        self.audio_output = QAudioOutput()
+        self.media_player.setAudioOutput(self.audio_output)
+        
+        # Ustawienie początkowego utworu
+        self.current_track = 0
+        self.media_player.setSource(QUrl.fromLocalFile(self.music_files[self.current_track]))
+
+        # Ustawienie głośności
+        self.audio_output.setVolume(0.2)  # 20% głośności
+
+        # Po zakończeniu odtwarzania jednego utworu, przechodzimy do kolejnego
+        self.media_player.mediaStatusChanged.connect(self.on_media_status_changed)
+
+        # Rozpoczęcie odtwarzania
+        self.media_player.play()
+        #DEBUGLINE print("Rozpoczęto odtwarzanie muzyki na zmianę.")
+
+    def on_media_status_changed(self, status):
+        """Metoda wywoływana po zakończeniu odtwarzania utworu"""
+        if status == QMediaPlayer.MediaStatus.EndOfMedia:
+            # Przechodzimy do kolejnego utworu w liście
+            self.current_track = (self.current_track + 1) % len(self.music_files)
+            
+            # Ustawienie nowego źródła muzyki
+            self.media_player.setSource(QUrl.fromLocalFile(self.music_files[self.current_track]))
+            
+            # Rozpoczęcie odtwarzania nowego utworu
+            self.media_player.play()
+
     def game_screen(self):
+
+        self.is_game_screen_active = True  # Ustawienie flagi, że ekran gry jest aktywny
+
 
         # Ustawienie tła (tlo.png)
         self.background_label = QLabel(self)
@@ -148,29 +323,33 @@ class GameGUI(QMainWindow):
         self.background_label.show()
 
         # Tworzenie terminala w czarnej przestrzeni na tle
-        self.console_output = QLabel(self)
-        self.console_output.setStyleSheet("background-color: black; color: #7CB9E8; font-family: monospace; padding: 10px;")
-        self.console_output.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.console_output = QTextEdit(self)
+        self.console_output.setReadOnly(True)
+        self.console_output.setStyleSheet("background-color: black; color: #7CB9E8; font-family: monospace; font-size: 30px; padding: 10px;")
+        self.console_output.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
         # Tworzenie pola do wprowadzania komend
         self.console_input = QLineEdit(self)
-        self.console_input.setStyleSheet("background-color: black; color: #7CB9E8; font-family: monospace; padding: 5px;")
+        self.console_input.setStyleSheet("background-color: black; color: #7CB9E8; font-family: monospace; font-size: 20px; padding: 5px;")
         self.console_input.setGeometry(40, 570, 1200, 30)  # Pozycja pola w GUI
         self.console_input.setFocus()  # Ustawia fokus na pole tekstowe
         self.console_input.setPlaceholderText("Wpisz komendę...")
         self.console_input.show()
 
-        self.console_output.setText("Oto twój terminal, tutaj możesz zarządzać światem kryptowalut\n" + "CryptoMiner~ >\n" + self.console_output.text() if hasattr(self, 'console_output') else "")
+        if hasattr(self, 'console_output'):
+            self.console_output.append("Oto twój terminal, tutaj możesz zarządzać światem kryptowalut\nCryptoMiner~ >")
 
         # Ustawienie terminala wewnątrz tła
         self.console_output.setGeometry(40, 130, 1200, 420)  # Pozycja i rozmiar w obrębie czarnej przestrzeni
         self.console_output.show()
+        self.show_cat()
 
     def update_console_output(self, output: str):
-        """Aktualizuje wyjście konsoli w GUI"""
-        current_text = self.console_output.text()
-        new_text = current_text + output
-        self.console_output.setText(new_text)
+        """Aktualizuje wyjście konsoli w GUI, usuwając nadmiarowe odstępy."""
+        output = output.strip()  # Usuwa nadmiarowe białe znaki, w tym \n na początku i końcu
+        if output:  # Dodaje tekst tylko, jeśli nie jest pusty po usunięciu białych znaków
+            self.console_output.append(output)
+            self.console_output.moveCursor(QTextCursor.MoveOperation.End)
 
     def send_command_to_cli(self, command: str):
         """Funkcja umożliwiająca wysyłanie komend do CLI"""
