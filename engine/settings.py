@@ -8,4 +8,4 @@ MESSAGES = {
 }
 PROMPT = 'CryptoMiner~ > '
 ZEROS_REQUIRED = 2
-SCRIPT_LENGTH = 5  # Relative script length. 2 will be extremely short, 10 will be extremely long.
+SCRIPT_LENGTH = 3  # Relative script length. 2 will be extremely short, 10 will be extremely long.
