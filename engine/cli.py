@@ -73,9 +73,9 @@ def reward():
         print(f'You have only {len(game.block.transactions)} out of {REQUIRED_TX} required accepted transactions.')
     else:
         global reward_requested
-        reward_requested = game.block.reward(include_wrong=False)
-        btc = reward_requested / 100_000_000
-        print(f'You have requested a reward of {btc} BTC (3.125 for mining + sum of transaction fees)')
+        reward_requested = game.block.reward(include_wrong=True)
+        _btc = reward_requested / 100_000_000
+        print(f'You have requested a reward of {_btc} BTC (3.125 for mining + sum of transaction fees)')
 
 def nonce_find():
     nonce = 0
