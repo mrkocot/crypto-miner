@@ -90,7 +90,7 @@ def nonce_find():
                 if _inp.lower() in ('exit', 'quit', 'end', 'leave', 'x'):
                     return
                 block_hash = game.block.hash(nonce)
-                print(f'Block hash for nonce={nonce}: {block_hash}', end='  ')
+                print(f'Block hash for nonce={nonce}: {block_hash}')
                 nonce += 1
         except KeyboardInterrupt:
             return
@@ -121,7 +121,8 @@ def close(args_: list[str]):
 
 start_time = time.time()
 while not loop_end:
-    inp = input(PROMPT).strip('/').split()
+    print(PROMPT)
+    inp = input().strip('/').split()
     if len(inp) == 0:
         continue
     command, args = inp[0].lower(), inp[1:]
@@ -142,7 +143,8 @@ while not loop_end:
     else:
         print(f'Unknown command "{command}"')
 print('---')
-input('Press ENTER to publish (you can\'t turn back anymore)... ')
+print('Press ENTER to publish (you can\'t turn back anymore)... ')
+input()
 
 elapsed = time.time() - start_time
 elapsed_delta = timedelta(seconds=elapsed)
