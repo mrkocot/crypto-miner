@@ -18,7 +18,6 @@ def transaction(args_: list[str]):
         if current_tx is None:
             print('No pending transaction. Get a new one with "transaction new"')
         else:
-            # print(f'D | Current error: {current_tx.error}')
             print(current_tx.printable())
     elif args_[0] in ('new', 'get'):
         if current_tx is not None:
@@ -90,7 +89,7 @@ def nonce_find():
                 if _inp.lower() in ('exit', 'quit', 'end', 'leave', 'x'):
                     return
                 block_hash = game.block.hash(nonce)
-                print(f'Block hash for nonce={nonce}: {block_hash}', end='  ')
+                print(f'Block hash for nonce={nonce}: {block_hash}')
                 nonce += 1
         except KeyboardInterrupt:
             return
@@ -121,7 +120,8 @@ def close(args_: list[str]):
 
 start_time = time.time()
 while not loop_end:
-    inp = input(PROMPT).strip('/').split()
+    print(PROMPT)
+    inp = input().strip('/').split()
     if len(inp) == 0:
         continue
     command, args = inp[0].lower(), inp[1:]
@@ -142,7 +142,8 @@ while not loop_end:
     else:
         print(f'Unknown command "{command}"')
 print('---')
-input('Press ENTER to publish (you can\'t turn back anymore)... ')
+print('Press ENTER to publish (you can\'t turn back anymore)... ')
+input()
 
 elapsed = time.time() - start_time
 elapsed_delta = timedelta(seconds=elapsed)
@@ -154,14 +155,14 @@ btc = real_reward / 100_000_000
 btc_diff = reward_diff / 100_000_000
 
 print('Congratulations! You have published your block! Time for some results:')
-print()
+print('---')
 print(f'You processed {tx_num} transactions in {elapsed_delta}')
 print(f'\t...that is {elapsed / tx_num:.2f} seconds per transaction!')
-print()
+print('---')
 print(f'Transaction decisions - {summary[True]} correct and {summary[False]} incorrect:')
 for r in game.results:
-    print('\t' + r.printable())
-print()
+    print('...' + r.printable())
+print('---')
 print(f'You got a reward of {btc} BTC (3.125 for mining + sum of transaction fees)')
 if btc_diff > 0:
     print(f'\t...although you requested {btc_diff} BTC more (a bit greedy, aren\'t we?)')

@@ -13,7 +13,7 @@ class Result:
     def printable(self) -> str:
         wrongly = 'rightfully' if self.correct else 'WRONGFULLY'
         decision = 'accepted' if self.accepted else 'rejected'
-        return f'Transaction {self.tx.tx_id}: {wrongly} {decision} - {self.message}'
+        return f'Transaction {self.tx.tx_id}: <i>{wrongly} {decision}</i> - <b>{self.message}</b>'
 
 class Game:
     block = Block()
