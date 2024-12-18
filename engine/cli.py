@@ -83,12 +83,14 @@ def nonce_find():
         print(f'You have not requested a reward yet. Do it with "reward"')
     else:
         print(f'Time to find the nonce value. The block\'s hash has to start with {ZEROS_REQUIRED} zeros')
-        print(f'Keep pressing ENTER to test values, Ctrl+C to stop', end='')
+        print(f'Keep pressing ENTER to test values, type "exit" to exit', end='')
         try:
             while True:
-                input()
+                _inp = input()
+                if _inp.lower() in ('exit', 'quit', 'end', 'leave', 'x'):
+                    return
                 block_hash = game.block.hash(nonce)
-                print(f'Block hash for nonce={nonce}: {block_hash}', end='')
+                print(f'Block hash for nonce={nonce}: {block_hash}', end='  ')
                 nonce += 1
         except KeyboardInterrupt:
             return
