@@ -348,8 +348,11 @@ class GameGUI(QMainWindow):
         """Aktualizuje wyjście konsoli w GUI, usuwając nadmiarowe odstępy."""
         output = output.strip()  # Usuwa nadmiarowe białe znaki, w tym \n na początku i końcu
         if output:  # Dodaje tekst tylko, jeśli nie jest pusty po usunięciu białych znaków
-            self.console_output.append(output)
-            self.console_output.moveCursor(QTextCursor.MoveOperation.End)
+            try:
+                self.console_output.append(output)
+                self.console_output.moveCursor(QTextCursor.MoveOperation.End)
+            except AttributeError:
+                pass
 
     def send_command_to_cli(self, command: str):
         """Funkcja umożliwiająca wysyłanie komend do CLI"""
