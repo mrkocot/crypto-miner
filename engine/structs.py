@@ -81,11 +81,9 @@ class TxOutput(TxIO):
 
     def printable(self) -> str:
         script_str = ' '.join((str(opc) for opc in self.script))
-        # print(f'D | {script_str}')
-        # print(f'D | {[opc.to_hex() for opc in self.script]}')
         script_hex = ''.join((opc.to_hex() for opc in self.script))
-        spent_str = 'U' if not self.spent else 'S'
-        return f'{self.tx_id} #{self.index} -> {self.amount} SAT <{spent_str}> | ScriptPubKey = {script_hex} [{script_str}]'
+        spent_str = '(U)' if not self.spent else '[S]'
+        return f'{self.tx_id} #{self.index} -> {self.amount} SAT {spent_str} | ScriptPubKey = {script_hex} [{script_str}]'
 
 
 class Transaction:
