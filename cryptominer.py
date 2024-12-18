@@ -365,10 +365,9 @@ class GameGUI(QMainWindow):
     def run_cli_command(self):
         """Metoda do uruchamiania komendy w CLI po naciśnięciu Enter."""
         command = self.console_input.text()  # Pobierz tekst z pola wejściowego
-        if command:
-            print(f"Wysyłanie komendy: {command}")
-            self.cli_thread.send_input(command)  # Wysyłanie komendy do CLI
-            self.console_input.clear()  # Czyści pole wejściowe po wysłaniu komendy
+        print(f"Wysyłanie komendy: {command}")
+        self.cli_thread.send_input(command)  # Wysyłanie komendy do CLI
+        self.console_input.clear()  # Czyści pole wejściowe po wysłaniu komendy
 
         def closeEvent(self, event):
             """Zatrzymuje wątek i zamyka aplikację"""
