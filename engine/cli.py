@@ -18,7 +18,6 @@ def transaction(args_: list[str]):
         if current_tx is None:
             print('No pending transaction. Get a new one with "transaction new"')
         else:
-            # print(f'D | Current error: {current_tx.error}')
             print(current_tx.printable())
     elif args_[0] in ('new', 'get'):
         if current_tx is not None:
@@ -156,14 +155,14 @@ btc = real_reward / 100_000_000
 btc_diff = reward_diff / 100_000_000
 
 print('Congratulations! You have published your block! Time for some results:')
-print()
+print('---')
 print(f'You processed {tx_num} transactions in {elapsed_delta}')
 print(f'\t...that is {elapsed / tx_num:.2f} seconds per transaction!')
-print()
+print('---')
 print(f'Transaction decisions - {summary[True]} correct and {summary[False]} incorrect:')
 for r in game.results:
-    print('\t' + r.printable())
-print()
+    print('...' + r.printable())
+print('---')
 print(f'You got a reward of {btc} BTC (3.125 for mining + sum of transaction fees)')
 if btc_diff > 0:
     print(f'\t...although you requested {btc_diff} BTC more (a bit greedy, aren\'t we?)')
