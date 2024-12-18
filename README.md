@@ -19,7 +19,7 @@ Perform the following checks:
 1. Go through the script and make sure it does not fail
 2. UTXO must exist in the database
 3. Sum all transaction's outputs - this sum must not be higher than the UTXO value
-4. UTXO needs to be marked as `<U>` (unspent). If it's `<S>`, reject the transaction
+4. UTXO needs to be marked as `(U)` (unspent). If it's `[S]`, reject the transaction
 
 ### Closing the block
 After you accept two or more transactions, you need to calculate the `reward`, find the `nonce` and `close` the block.
